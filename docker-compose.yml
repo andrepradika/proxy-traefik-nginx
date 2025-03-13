@@ -1,0 +1,44 @@
+version: '3.7'
+
+services:
+  traefik:
+    image: traefik:v2.5
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.httpChallenge.entryPoint=web"
+      - "--certificatesresolvers.myresolver.acme.email=andrepradika@gmail.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./letsencrypt:/letsencrypt"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`traefik.kutujaman.my.id`)"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls=true"
+      - "traefik.http.routers.api.tls.certresolver=myresolver"
+
+  nginx:
+    image: nginx:latest
+    container_name: salaka-reverse-proxy
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.salaka-proxy.rule=Host(`kutujaman.my.id`)"
+      - "traefik.http.routers.salaka-proxy.entrypoints=websecure"
+      - "traefik.http.routers.salaka-proxy.tls=true"
+      - "traefik.http.routers.salaka-proxy.tls.certresolver=myresolver"
+    environment:
+      - "WEBSITE_URL=https://damarsalaka.com"
+    ports:
+      - "8080:80"
+
